@@ -149,8 +149,8 @@ let data = [
   {
     name: "기타", cat: "cat2", catIdx: 2,
     subs: [
-      { name: "뉴스레터", groups: [{ name: "진행단계", tasks: [] }] },
-      { name: "자율개선", groups: [{ name: "진행단계", tasks: [] }] }
+      { name: "뉴스레터", groups: [] },
+      { name: "자율개선", groups: [] }
     ]
   }
 ];
@@ -215,28 +215,54 @@ async function loadFromNotion() {
     data.forEach(big => big.subs.forEach(sub => sub.groups.forEach(g => g.tasks = [])));
 
     // 각 페이지를 data 구조에 매핑
+    const unmapped = [];
     for (const page of allPages) {
       const props = page.properties;
 
       const title = props["이름"]?.title?.[0]?.plain_text || "(제목 없음)";
       const bigName = props["대분류"]?.select?.name || "";
-      const midName = props["중분류"]?.relation?.[0]
-        ? await resolveRelation(props["중분류"].relation[0].id)
-        : (props["중분류"]?.select?.name || "");
-      const groupName = props["키워드"]?.multi_select?.[0]?.name || "기타요청";
-      const statusName = props["상태"]?.select?.name || "할 일";
+
+      // 중분류: 관계형 우선, 없으면 선택형, 없으면 텍스트형
+      let midName = "";
+      if (props["중분류"]?.relation?.length > 0) {
+        midName = await resolveRelation(props["중분류"].relation[0].id);
+      } else if (props["중분류"]?.select?.name) {
+        midName = props["중분류"].select.name;
+      } else if (props["중분류"]?.rich_text?.[0]?.plain_text) {
+        midName = props["중분류"].rich_text[0].plain_text;
+      }
+
+      const groupName = props["키워드"]?.multi_select?.[0]?.name || "기타";
+      const statusName = props["상태"]?.select?.name || props["상태"]?.status?.name || "할 일";
       const col = STATUS_TO_COL[statusName] ?? 0;
 
       const bigObj = data.find(b => b.name === bigName);
-      if (!bigObj) continue;
-      const subObj = bigObj.subs.find(s => s.name === midName);
-      if (!subObj) continue;
+      if (!bigObj) { unmapped.push("대분류 없음: " + bigName + " / " + title); continue; }
+
+      // 중분류 찾기 — 없으면 자동 생성
+      let subObj = bigObj.subs.find(s => s.name === midName);
+      if (!subObj) {
+        if (midName) {
+          subObj = { name: midName, groups: [] };
+          bigObj.subs.push(subObj);
+        } else {
+          unmapped.push("중분류 없음: " + bigName + " / " + title);
+          continue;
+        }
+      }
+
+      // 그룹 찾기 — 없으면 자동 생성
       let groupObj = subObj.groups.find(g => g.name === groupName);
       if (!groupObj) {
         groupObj = { name: groupName, tasks: [] };
         subObj.groups.push(groupObj);
       }
+
       groupObj.tasks.push({ title, col, notionId: page.id });
+    }
+
+    if (unmapped.length > 0) {
+      console.warn("매핑 실패 항목:", unmapped);
     }
 
     notionConnected = true;
