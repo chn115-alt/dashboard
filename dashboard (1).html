@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무 대시보드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f5f4f0;color:#1a1a18;padding:24px;min-height:100vh;}
+.container{max-width:960px;margin:0 auto;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid #e0dfd8;margin-bottom:16px;}
+.topbar h1{font-size:20px;font-weight:500;color:#1a1a18;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-date{font-size:12px;color:#888780;}
+.sync-btn{font-size:12px;padding:5px 12px;border-radius:16px;border:1px solid #ccc;background:#fff;cursor:pointer;color:#555;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.sync-btn:hover{background:#f0efe8;border-color:#aaa;}
+.sync-btn.syncing{color:#7F77DD;border-color:#7F77DD;}
+.status-bar{font-size:11px;padding:6px 12px;border-radius:8px;margin-bottom:14px;display:none;}
+.status-bar.loading{display:block;background:#EEEDFE;color:#3C3489;}
+.status-bar.error{display:block;background:#FCEBEB;color:#A32D2D;}
+.status-bar.success{display:block;background:#E1F5EE;color:#085041;}
+.section-label{font-size:11px;color:#888780;margin-bottom:7px;letter-spacing:.04em;text-transform:uppercase;}
+.big-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.big-tab{font-size:14px;font-weight:500;padding:6px 20px;border-radius:20px;border:1px solid #ccc;background:transparent;color:#666;cursor:pointer;transition:all .15s;}
+.big-tab:hover{background:#eee;}
+.big-tab.active.cat0{background:#EEEDFE;color:#3C3489;border-color:transparent;}
+.big-tab.active.cat1{background:#E1F5EE;color:#085041;border-color:transparent;}
+.big-tab.active.cat2{background:#FAEEDA;color:#633806;border-color:transparent;}
+.mid-grid{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.mid-card{border:1px solid #ddd;border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .15s;background:#fff;}
+.mid-card:hover{background:#f5f4f0;}
+.mid-card.active.cat0{border:2px solid #7F77DD;background:#EEEDFE;}
+.mid-card.active.cat1{border:2px solid #1D9E75;background:#E1F5EE;}
+.mid-card.active.cat2{border:2px solid #EF9F27;background:#FAEEDA;}
+.mid-name{font-size:13px;font-weight:500;color:#1a1a18;}
+.mid-sub{font-size:11px;color:#888780;margin-top:2px;}
+.breadcrumb{font-size:12px;color:#888780;margin-bottom:14px;display:flex;align-items:center;gap:5px;}
+.breadcrumb b{color:#1a1a18;font-weight:500;}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.stat{background:#eceae4;border-radius:8px;padding:10px 12px;}
+.stat-label{font-size:11px;color:#888780;margin-bottom:3px;}
+.stat-val{font-size:20px;font-weight:500;color:#1a1a18;}
+.group-board{display:flex;flex-direction:column;gap:12px;}
+.group-section{border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#fff;}
+.group-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #ddd;cursor:pointer;user-select:none;transition:background .15s;}
+.group-header:hover{background:#f9f8f5;}
+.group-title{display:flex;align-items:center;gap:8px;}
+.group-badge{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:500;}
+.gb0{background:#EEEDFE;color:#3C3489;}
+.gb1{background:#E1F5EE;color:#085041;}
+.gb2{background:#FAEEDA;color:#633806;}
+.gb3{background:#E6F1FB;color:#0C447C;}
+.group-task-count{font-size:12px;color:#888780;}
+.group-stats{font-size:11px;color:#888780;display:flex;align-items:center;gap:10px;}
+.chevron{font-size:14px;transition:transform .2s;color:#aaa;display:inline-block;}
+.group-body{display:grid;grid-template-columns:repeat(3,1fr);}
+.collapsed .group-body{display:none;}
+.collapsed .chevron{transform:rotate(-90deg);}
+.kcol{padding:10px 12px;}
+.kcol+.kcol{border-left:1px solid #eee;}
+.kcol-title{font-size:11px;color:#888780;font-weight:500;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f0efe8;}
+.task-chip{background:#f9f8f5;border:1px solid #e5e4dc;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:13px;color:#1a1a18;display:flex;align-items:center;justify-content:space-between;gap:6px;transition:border-color .15s;}
+.task-chip:hover{border-color:#bbb;background:#fff;}
+.task-chip.updating{opacity:0.5;}
+.task-chip:last-child{margin-bottom:0;}
+.task-chip .task-name{flex:1;font-size:13px;}
+.task-btns{display:flex;gap:3px;flex-shrink:0;}
+.task-btns button{background:none;border:1px solid #ddd;border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:#888;transition:all .15s;}
+.task-btns button:hover{background:#eee;color:#333;}
+.task-btns button:disabled{opacity:0.3;cursor:not-allowed;}
+.empty-col{font-size:12px;color:#ccc;padding:10px 0;text-align:center;}
+.add-chip{border:1px dashed #ccc;border-radius:8px;padding:7px 10px;margin-top:6px;font-size:12px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:4px;background:transparent;width:100%;transition:all .15s;}
+.add-chip:hover{background:#f5f4f0;color:#666;}
+.notion-badge{font-size:10px;background:#f0efe8;color:#888;padding:2px 7px;border-radius:8px;margin-left:6px;}
+@media(max-width:600px){
+  .summary{grid-template-columns:repeat(2,1fr);}
+  .group-body{grid-template-columns:1fr;}
+  .kcol+.kcol{border-left:none;border-top:1px solid #eee;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <h1>업무 대시보드</h1>
+    <div class="topbar-right">
+      <div class="topbar-date" id="today"></div>
+      <button class="sync-btn" id="sync-btn" onclick="loadFromNotion()">🔄 Notion 동기화</button>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar"></div>
+
+  <div class="section-label">대분류</div>
+  <div class="big-tabs" id="big-tabs"></div>
+  <div class="section-label">중분류</div>
+  <div class="mid-grid" id="mid-grid"></div>
+  <div class="breadcrumb" id="breadcrumb"></div>
+  <div class="summary" id="summary"></div>
+  <div class="group-board" id="board"></div>
+</div>
+
+<script>
+// ===============================================================
+// ⬇ 여기에 Notion API 키와 DB ID를 입력하세요
+// ===============================================================
+const NOTION_API_KEY = "ntn_Hd2363137965frANG8xChonfOmOcMiMFNFRFMnqLWTreqN";
+const NOTION_DB_ID   = "2dc00e15dcc48046895ee03c5418cc4d";
+// ===============================================================
+
+// Notion 상태값 ↔ 대시보드 col 번호 매핑
+const STATUS_TO_COL = { "할 일": 0, "진행중": 1, "완료": 2 };
+const COL_TO_STATUS = { 0: "할 일", 1: "진행중", 2: "완료" };
+
+// 그룹 순서 (자문 전용)
+const GROUP_ORDER = ["급여", "입퇴사", "기타요청", "질의"];
+
+// 기본 데이터 (Notion 연동 전 또는 오프라인 시 사용)
+let data = [
+  {
+    name: "자문", cat: "cat0", catIdx: 0,
+    subs: [
+      { name: "푸른꿈", groups: [
+        { name: "급여",     tasks: [{ title: "급여명세서 발송", col: 0, notionId: null }] },
+        { name: "입퇴사",  tasks: [] },
+        { name: "기타요청", tasks: [] },
+        { name: "질의",    tasks: [] }
+      ]},
+      { name: "동명",  groups: [{ name: "급여", tasks: [] }, { name: "입퇴사", tasks: [] }, { name: "기타요청", tasks: [] }, { name: "질의", tasks: [] }] },
+      { name: "정광",  groups: [{ name: "급여", tasks: [] }, { name: "입퇴사", tasks: [] }, { name: "기타요청", tasks: [] }, { name: "질의", tasks: [] }] },
+      { name: "삼원",  groups: [{ name: "급여", tasks: [] }, { name: "입퇴사", tasks: [] }, { name: "기타요청", tasks: [] }, { name: "질의", tasks: [] }] },
+      { name: "루트",  groups: [{ name: "급여", tasks: [] }, { name: "입퇴사", tasks: [] }, { name: "기타요청", tasks: [] }, { name: "질의", tasks: [] }] }
+    ]
+  },
+  {
+    name: "사건", cat: "cat1", catIdx: 1,
+    subs: [
+      { name: "한일", groups: [{ name: "진행단계", tasks: [
+        { title: "초기상담", col: 2, notionId: null },
+        { title: "사실관계 파악", col: 1, notionId: null },
+        { title: "서면 작성", col: 0, notionId: null },
+        { title: "검토", col: 0, notionId: null },
+        { title: "제출", col: 0, notionId: null }
+      ]}]},
+      { name: "흥성", groups: [{ name: "진행단계", tasks: [] }] },
+      { name: "보세", groups: [{ name: "진행단계", tasks: [] }] }
+    ]
+  },
+  {
+    name: "기타", cat: "cat2", catIdx: 2,
+    subs: [
+      { name: "뉴스레터", groups: [{ name: "진행단계", tasks: [] }] },
+      { name: "자율개선", groups: [{ name: "진행단계", tasks: [] }] }
+    ]
+  }
+];
+
+const colNames = ["할 일", "진행중", "완료"];
+const groupColors = ["gb0", "gb1", "gb2", "gb3"];
+let bigIdx = 0, midIdx = 0;
+const collapsed = {};
+let notionConnected = false;
+
+// ───────────────────────────────────────────
+// Notion API 호출 (CORS 프록시 경유)
+// ───────────────────────────────────────────
+const PROXY = "https://api.allorigins.win/raw?url=";
+
+async function notionFetch(path, options = {}) {
+  const url = PROXY + encodeURIComponent("https://api.notion.com" + path);
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Authorization": "Bearer " + NOTION_API_KEY,
+      "Notion-Version": "2022-06-28",
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) throw new Error(`Notion API 오류 ${res.status}`);
+  return res.json();
+}
+
+// ───────────────────────────────────────────
+// Notion DB → data 구조로 변환
+// ───────────────────────────────────────────
+async function loadFromNotion() {
+  if (NOTION_API_KEY === "여기에_새_API_키_입력") {
+    showStatus("error", "⚠ API 키를 아직 입력하지 않으셨어요. HTML 파일을 텍스트 편집기로 열어 NOTION_API_KEY를 수정해주세요.");
+    return;
+  }
+
+  showStatus("loading", "🔄 Notion에서 데이터를 불러오는 중...");
+  const btn = document.getElementById("sync-btn");
+  btn.classList.add("syncing");
+  btn.textContent = "🔄 동기화 중...";
+
+  try {
+    let allPages = [];
+    let cursor = undefined;
+    // 페이지네이션 처리 (100개 이상도 대응)
+    while (true) {
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      const res = await notionFetch("/v1/databases/" + NOTION_DB_ID + "/query", {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+      allPages = allPages.concat(res.results);
+      if (!res.has_more) break;
+      cursor = res.next_cursor;
+    }
+
+    // data 초기화 (tasks 비우기)
+    data.forEach(big => big.subs.forEach(sub => sub.groups.forEach(g => g.tasks = [])));
+
+    // 각 페이지를 data 구조에 매핑
+    for (const page of allPages) {
+      const props = page.properties;
+
+      const title = props["이름"]?.title?.[0]?.plain_text || "(제목 없음)";
+      const bigName = props["대분류"]?.select?.name || "";
+      const midName = props["중분류"]?.relation?.[0]
+        ? await resolveRelation(props["중분류"].relation[0].id)
+        : (props["중분류"]?.select?.name || "");
+      const groupName = props["키워드"]?.multi_select?.[0]?.name || "기타요청";
+      const statusName = props["상태"]?.select?.name || "할 일";
+      const col = STATUS_TO_COL[statusName] ?? 0;
+
+      const bigObj = data.find(b => b.name === bigName);
+      if (!bigObj) continue;
+      const subObj = bigObj.subs.find(s => s.name === midName);
+      if (!subObj) continue;
+      let groupObj = subObj.groups.find(g => g.name === groupName);
+      if (!groupObj) {
+        groupObj = { name: groupName, tasks: [] };
+        subObj.groups.push(groupObj);
+      }
+      groupObj.tasks.push({ title, col, notionId: page.id });
+    }
+
+    notionConnected = true;
+    showStatus("success", `✅ Notion에서 ${allPages.length}개 과업을 불러왔어요.`);
+    setTimeout(() => hideStatus(), 3000);
+  } catch (e) {
+    showStatus("error", "❌ 연동 실패: " + e.message + " — API 키와 DB ID, Integration 연결을 확인해주세요.");
+  } finally {
+    btn.classList.remove("syncing");
+    btn.textContent = "🔄 Notion 동기화";
+    render();
+  }
+}
+
+// 관계형 페이지 ID → 이름 변환 캐시
+const relationCache = {};
+async function resolveRelation(pageId) {
+  if (relationCache[pageId]) return relationCache[pageId];
+  try {
+    const page = await notionFetch("/v1/pages/" + pageId);
+    const name = Object.values(page.properties).find(p => p.type === "title")?.title?.[0]?.plain_text || pageId;
+    relationCache[pageId] = name;
+    return name;
+  } catch { return pageId; }
+}
+
+// ───────────────────────────────────────────
+// 상태 변경 → Notion 업데이트
+// ───────────────────────────────────────────
+async function moveTask(bi, mi, gi, taskIdx, newCol) {
+  const task = data[bi].subs[mi].groups[gi].tasks[taskIdx];
+  task.col = newCol;
+  render();
+
+  if (!task.notionId || !notionConnected) return;
+
+  try {
+    await notionFetch("/v1/pages/" + task.notionId, {
+      method: "PATCH",
+      body: JSON.stringify({
+        properties: {
+          "상태": { select: { name: COL_TO_STATUS[newCol] } }
+        }
+      })
+    });
+  } catch (e) {
+    showStatus("error", "⚠ Notion 업데이트 실패: " + e.message);
+    setTimeout(() => hideStatus(), 4000);
+  }
+}
+
+// ───────────────────────────────────────────
+// 과업 추가 → Notion에도 생성
+// ───────────────────────────────────────────
+async function addTask(bi, mi, gi) {
+  const name = prompt("새 과업 이름을 입력하세요:");
+  if (!name || !name.trim()) return;
+
+  const big = data[bi], sub = big.subs[mi], group = sub.groups[gi];
+  const newTask = { title: name.trim(), col: 0, notionId: null };
+  group.tasks.unshift(newTask);
+  render();
+
+  if (!notionConnected) return;
+
+  try {
+    const res = await notionFetch("/v1/pages", {
+      method: "POST",
+      body: JSON.stringify({
+        parent: { database_id: NOTION_DB_ID },
+        properties: {
+          "이름":   { title: [{ text: { content: name.trim() } }] },
+          "대분류": { select: { name: big.name } },
+          "키워드": { multi_select: [{ name: group.name }] },
+          "상태":   { select: { name: "할 일" } }
+        }
+      })
+    });
+    newTask.notionId = res.id;
+    showStatus("success", "✅ Notion에 과업이 추가됐어요.");
+    setTimeout(() => hideStatus(), 2500);
+  } catch (e) {
+    showStatus("error", "⚠ Notion 추가 실패: " + e.message);
+  }
+}
+
+// ───────────────────────────────────────────
+// 과업 삭제 (로컬만, Notion은 아카이브)
+// ───────────────────────────────────────────
+async function deleteTask(bi, mi, gi, taskIdx) {
+  if (!confirm("과업을 삭제할까요?")) return;
+  const task = data[bi].subs[mi].groups[gi].tasks[taskIdx];
+  data[bi].subs[mi].groups[gi].tasks.splice(taskIdx, 1);
+  render();
+
+  if (!task.notionId || !notionConnected) return;
+  try {
+    await notionFetch("/v1/pages/" + task.notionId, {
+      method: "PATCH",
+      body: JSON.stringify({ archived: true })
+    });
+  } catch (e) { /* silent */ }
+}
+
+// ───────────────────────────────────────────
+// UI 헬퍼
+// ───────────────────────────────────────────
+function showStatus(type, msg) {
+  const el = document.getElementById("status-bar");
+  el.className = "status-bar " + type;
+  el.textContent = msg;
+}
+function hideStatus() {
+  document.getElementById("status-bar").className = "status-bar";
+}
+function toggleGroup(key) { collapsed[key] = !collapsed[key]; render(); }
+function switchBig(i) { bigIdx = i; midIdx = 0; render(); }
+function switchMid(i) { midIdx = i; render(); }
+function allTasks(sub) { return sub.groups.flatMap(g => g.tasks); }
+
+// ───────────────────────────────────────────
+// 렌더링
+// ───────────────────────────────────────────
+function render() {
+  const big = data[bigIdx], sub = big.subs[midIdx];
+
+  document.getElementById("today").textContent =
+    new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+
+  document.getElementById("big-tabs").innerHTML = data.map((d, i) =>
+    `<button class="big-tab ${d.cat}${i === bigIdx ? " active" : ""}" onclick="switchBig(${i})">${d.name}</button>`
+  ).join("");
+
+  document.getElementById("mid-grid").innerHTML = big.subs.map((s, i) => {
+    const all = allTasks(s), done = all.filter(t => t.col === 2).length;
+    return `<div class="mid-card${i === midIdx ? " active " + big.cat : ""}" onclick="switchMid(${i})">
+      <div class="mid-name">${s.name}</div>
+      <div class="mid-sub">${done}/${all.length} 완료</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("breadcrumb").innerHTML =
+    `▸ <b>${big.name}</b> › <b>${sub.name}</b>${notionConnected ? '<span class="notion-badge">Notion 연동됨</span>' : ''}`;
+
+  const all = allTasks(sub);
+  const done = all.filter(t => t.col === 2).length;
+  const inprog = all.filter(t => t.col === 1).length;
+  const todo = all.filter(t => t.col === 0).length;
+  document.getElementById("summary").innerHTML = `
+    <div class="stat"><div class="stat-label">전체 과업</div><div class="stat-val">${all.length}</div></div>
+    <div class="stat"><div class="stat-label">할 일</div><div class="stat-val">${todo}</div></div>
+    <div class="stat"><div class="stat-label">진행중</div><div class="stat-val">${inprog}</div></div>
+    <div class="stat"><div class="stat-label">완료율</div><div class="stat-val">${all.length ? Math.round(done / all.length * 100) : 0}%</div></div>
+  `;
+
+  document.getElementById("board").innerHTML = sub.groups.map((g, gi) => {
+    const key = `${bigIdx}-${midIdx}-${gi}`;
+    const isCollapsed = collapsed[key];
+    const gdone = g.tasks.filter(t => t.col === 2).length;
+    const gcls = bigIdx === 0 ? (groupColors[gi] || "gb0") : "gb0";
+
+    const cols = colNames.map((cn, colIdx) => {
+      const tasks = g.tasks.map((t, origIdx) => ({ ...t, origIdx })).filter(t => t.col === colIdx);
+      const chips = tasks.map(t => {
+        const prevBtn = colIdx > 0 ? `<button onclick="moveTask(${bigIdx},${midIdx},${gi},${t.origIdx},${colIdx-1})" title="이전으로">◀</button>` : "";
+        const nextBtn = colIdx < 2 ? `<button onclick="moveTask(${bigIdx},${midIdx},${gi},${t.origIdx},${colIdx+1})" title="다음으로">▶</button>` : "";
+        const delBtn = `<button onclick="deleteTask(${bigIdx},${midIdx},${gi},${t.origIdx})" title="삭제">✕</button>`;
+        const nBadge = t.notionId ? '<span style="font-size:9px;color:#bbb;margin-left:3px;">N</span>' : "";
+        return `<div class="task-chip">
+          <span class="task-name">${t.title}${nBadge}</span>
+          <span class="task-btns">${prevBtn}${nextBtn}${delBtn}</span>
+        </div>`;
+      }).join("");
+      const addBtn = colIdx === 0 ? `<button class="add-chip" onclick="addTask(${bigIdx},${midIdx},${gi})">＋ 과업 추가</button>` : "";
+      return `<div class="kcol">
+        <div class="kcol-title">${cn}</div>
+        ${chips || '<div class="empty-col">—</div>'}
+        ${addBtn}
+      </div>`;
+    }).join("");
+
+    return `<div class="group-section${isCollapsed ? " collapsed" : ""}">
+      <div class="group-header" onclick="toggleGroup('${key}')">
+        <div class="group-title">
+          <span class="group-badge ${gcls}">${g.name}</span>
+          <span class="group-task-count">${g.tasks.length}개 과업</span>
+        </div>
+        <div class="group-stats">
+          <span>${gdone}/${g.tasks.length} 완료</span>
+          <span class="chevron">▾</span>
+        </div>
+      </div>
+      <div class="group-body">${cols}</div>
+    </div>`;
+  }).join("");
+}
+
+// 시작
+render();
+// API 키가 입력돼 있으면 자동 로드
+if (NOTION_API_KEY !== "여기에_새_API_키_입력") loadFromNotion();
+</script>
+</body>
+</html>
