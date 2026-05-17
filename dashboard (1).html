@@ -162,12 +162,12 @@ const collapsed = {};
 let notionConnected = false;
 
 // ───────────────────────────────────────────
-// Notion API 호출 (CORS 프록시 경유)
+// Notion API 호출 (Cloudflare Worker 경유)
 // ───────────────────────────────────────────
-const PROXY = "https://api.allorigins.win/raw?url=";
+const WORKER_URL = "https://notion-proxy.blanc0115.workers.dev";
 
 async function notionFetch(path, options = {}) {
-  const url = PROXY + encodeURIComponent("https://api.notion.com" + path);
+  const url = WORKER_URL + path;
   const res = await fetch(url, {
     ...options,
     headers: {
