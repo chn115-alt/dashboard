@@ -222,36 +222,35 @@ async function loadFromNotion() {
       const title = props["이름"]?.title?.[0]?.plain_text || "(제목 없음)";
       const bigName = props["대분류"]?.select?.name || "";
 
-      // 중분류: 관계형 우선, 없으면 선택형, 없으면 텍스트형
+      // 중분류: 관계형 → 페이지 제목 조회, 실패시 선택형, 텍스트형 순서로 시도
       let midName = "";
       if (props["중분류"]?.relation?.length > 0) {
-        midName = await resolveRelation(props["중분류"].relation[0].id);
-      } else if (props["중분류"]?.select?.name) {
-        midName = props["중분류"].select.name;
-      } else if (props["중분류"]?.rich_text?.[0]?.plain_text) {
-        midName = props["중분류"].rich_text[0].plain_text;
+        try {
+          midName = await resolveRelation(props["중분류"].relation[0].id);
+          // resolveRelation이 페이지ID를 그대로 반환하면 실패로 간주
+          if (midName === props["중분류"].relation[0].id) midName = "";
+        } catch { midName = ""; }
       }
+      if (!midName && props["중분류"]?.select?.name) midName = props["중분류"].select.name;
+      if (!midName && props["중분류"]?.rich_text?.[0]?.plain_text) midName = props["중분류"].rich_text[0].plain_text;
 
       const groupName = props["키워드"]?.multi_select?.[0]?.name || "기타";
       const statusName = props["상태"]?.select?.name || props["상태"]?.status?.name || "할 일";
       const col = STATUS_TO_COL[statusName] ?? 0;
 
+      // 대분류가 없으면 스킵
       const bigObj = data.find(b => b.name === bigName);
-      if (!bigObj) { unmapped.push("대분류 없음: " + bigName + " / " + title); continue; }
+      if (!bigObj) { unmapped.push("대분류 없음: [" + bigName + "] " + title); continue; }
 
-      // 중분류 찾기 — 없으면 자동 생성
+      // 중분류: 이름 못 가져왔으면 "(중분류 미지정)"으로 자동 생성
+      if (!midName) midName = "(중분류 미지정)";
       let subObj = bigObj.subs.find(s => s.name === midName);
       if (!subObj) {
-        if (midName) {
-          subObj = { name: midName, groups: [] };
-          bigObj.subs.push(subObj);
-        } else {
-          unmapped.push("중분류 없음: " + bigName + " / " + title);
-          continue;
-        }
+        subObj = { name: midName, groups: [] };
+        bigObj.subs.push(subObj);
       }
 
-      // 그룹 찾기 — 없으면 자동 생성
+      // 그룹: 없으면 자동 생성
       let groupObj = subObj.groups.find(g => g.name === groupName);
       if (!groupObj) {
         groupObj = { name: groupName, tasks: [] };
